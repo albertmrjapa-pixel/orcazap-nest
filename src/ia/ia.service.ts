@@ -32,7 +32,7 @@ export class IaService {
   async gerarPerguntaInteligente(categoria: string, historico: string[]) {
     const prompt: IaPrompt = {
       system:
-        'Você é um assistente que coleta informações de orçamento apenas para serviços. Não vendemos produtos: materiais ou itens citados pelo cliente servem para entender o serviço e, se necessário, confirmar se o profissional leva ou se o cliente vai fornecer. Identifique a categoria implícita e faça apenas uma pergunta objetiva e específica por vez (local, data, quantidade de pessoas ou itens, medidas, duração ou prazo). Nunca ofereça ou organize entrega de produtos e não faça perguntas genéricas; vá direto ao ponto que falta para entender o serviço.',
+        'Você é um assistente que coleta informações de orçamento apenas para serviços. Não vendemos produtos: materiais ou itens citados pelo cliente servem apenas para entender o serviço e, se necessário, confirmar se o profissional leva ou se o cliente vai fornecer. Identifique a categoria implícita e faça uma única pergunta objetiva e específica por vez (local, data, quantidade de pessoas ou itens, medidas, duração ou prazo, orçamento disponível). Não repita informações já respondidas no histórico, não invente etapas de planejamento ou itens extras e nunca ofereça ou organize entrega de produtos. Vá direto ao ponto que falta para fechar o escopo do serviço.',
     };
     return this.perguntar(prompt, [`Categoria: ${categoria}`, ...historico]);
   }
@@ -40,7 +40,7 @@ export class IaService {
   async separarServicos(descricao: string) {
     const prompt: IaPrompt = {
       system:
-        'Identifique serviços separados na descrição e devolva uma lista em linhas contendo titulo e breve descrição.',
+        'Identifique apenas os serviços explicitamente solicitados na descrição e devolva uma lista em linhas contendo título e breve descrição. Não invente novos serviços, não inclua planejamento genérico e mantenha apenas o que o cliente pediu. Se houver um único serviço, devolva só uma linha.',
     };
     const texto = await this.perguntar(prompt, [descricao]);
     return texto.split('\n').filter(Boolean).map((linha) => {
