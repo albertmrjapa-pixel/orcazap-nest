@@ -1,9 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
-
-async function main() {
+export async function seedPrecosPerguntas(prisma: PrismaClient) {
   const categorias = await prisma.categoria.findMany();
+
   for (const categoria of categorias) {
     for (let ordem = 1; ordem <= 3; ordem++) {
       await prisma.perguntaIa.upsert({
@@ -20,10 +19,3 @@ async function main() {
     }
   }
 }
-
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(async () => prisma.$disconnect());

@@ -1,8 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
-
-async function main() {
+export async function seedCategorias(prisma: PrismaClient) {
   const categorias = ['Elétrica', 'Pintura', 'Pedreiro', 'Refrigeração'];
   for (const nome of categorias) {
     const categoriaExistente = await prisma.categoria.findFirst({ where: { nome } });
@@ -12,10 +10,3 @@ async function main() {
     }
   }
 }
-
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(async () => prisma.$disconnect());
