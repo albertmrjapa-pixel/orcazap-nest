@@ -15,6 +15,7 @@ import { MeuPerfilFlow } from './flows/meu-perfil.flow';
 import { SuporteIaFlow } from './flows/suporte-ia.flow';
 import { TtsService } from './core/tts.service';
 import { ProfissionalService } from '../profissional/profissional.service';
+import { OrcamentosService } from '../orcamentos/orcamentos.service';
 
 @Injectable()
 export class WhatsappService {
@@ -35,6 +36,7 @@ export class WhatsappService {
     private readonly suporteIaFlow: SuporteIaFlow,
     private readonly ttsService: TtsService,
     private readonly profissionalService: ProfissionalService,
+    private readonly orcamentosService: OrcamentosService,
   ) {}
 
   async processarMensagem(chatId: string, mensagem: string) {
