@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from 'fs';
 import { join } from 'path';
-import textToSpeech from '@google-cloud/text-to-speech';
+import { TextToSpeechClient, protos } from '@google-cloud/text-to-speech';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -24,7 +24,7 @@ type TtsResult = {
 export class TtsService {
   private readonly logger = new Logger('TtsService');
   private readonly ttsDir = join(process.cwd(), 'tts_output');
-  private readonly client: textToSpeech.TextToSpeechClient;
+  private readonly client: TextToSpeechClient;
 
   constructor() {
     if (!existsSync(this.ttsDir)) {
@@ -33,7 +33,7 @@ export class TtsService {
 
     const keyPath = join(process.cwd(), 'orcazap-tts-61ef47dd242f.json');
 
-    this.client = new textToSpeech.TextToSpeechClient({
+    this.client = new TextToSpeechClient({
       keyFilename: keyPath,
     });
 
@@ -44,7 +44,7 @@ export class TtsService {
     try {
       this.logger.log('🎤 Enviando texto para Google Cloud TTS...');
 
-      const request: textToSpeech.protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
+      const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
         input: { text: texto },
         voice: {
           languageCode: 'pt-BR',
