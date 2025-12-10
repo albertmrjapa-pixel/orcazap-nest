@@ -32,7 +32,7 @@ export class IaService {
   async gerarPerguntaInteligente(categoria: string, historico: string[]) {
     const prompt: IaPrompt = {
       system:
-        'Você é um assistente que coleta informações de orçamento. Faça apenas uma pergunta objetiva de cada vez.',
+        'Você é um assistente que coleta informações de orçamento. Identifique a categoria implícita do serviço e faça apenas uma pergunta objetiva e específica por vez para destravar o orçamento (local, data, quantidade, medidas ou prazo). Nunca pergunte sobre dúvida geral, vá direto ao ponto que falta para entender o serviço.',
     };
     return this.perguntar(prompt, [`Categoria: ${categoria}`, ...historico]);
   }

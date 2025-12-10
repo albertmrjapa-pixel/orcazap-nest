@@ -108,7 +108,7 @@ export class WhatsappService {
 
   private async tratarPerguntasIa(chatId: string, respostaAnterior: string) {
     const ctx = this.context.get(chatId)!;
-    const pergunta = await this.perguntasIaFlow.perguntar(chatId, 'Geral', respostaAnterior || undefined);
+    const pergunta = await this.perguntasIaFlow.perguntar(chatId, respostaAnterior || undefined);
     const historico = this.context.get(chatId)!.payload?.historico ?? [];
     if (historico.length >= 3) {
       this.context.set(chatId, { ...ctx, step: 'perguntas-fixas', payload: { fixaIndex: 0 } });

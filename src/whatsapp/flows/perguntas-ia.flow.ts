@@ -12,16 +12,27 @@ export class PerguntasIaFlow {
     private readonly context: WhatsappContextStore,
   ) {}
 
-  async perguntar(chatId: string, categoria: string, respostaAnterior?: string) {
+  async perguntar(chatId: string, respostaAnterior?: string) {
     const ctx = this.context.get(chatId);
     if (!ctx?.orcamentoId) throw new Error('Contexto de orçamento não encontrado');
-    const historico: string[] = ctx.payload?.historico ?? [];
+    const payload = ctx.payload ?? {};
+    const historico: string[] = payload.historico ?? [];
+    const servicos = payload.servicos ?? [];
+    const servicoAtual = payload.servicoAtual ?? 0;
+    const servicoContexto = servicos[servicoAtual];
     if (respostaAnterior) {
       historico.push(respostaAnterior);
       await this.orcamentosService.registrarResposta(ctx.orcamentoId, `Pergunta ${historico.length}`, respostaAnterior);
     }
-    const pergunta = await this.iaService.gerarPerguntaInteligente(categoria, historico);
-    const novoContexto: WhatsappContext = { ...ctx, step: 'perguntas-ia', payload: { historico } };
+    const categoriaContexto = servicoContexto
+      ? `Serviço: ${servicoContexto.titulo}${servicoContexto.descricao ? ` - ${servicoContexto.descricao}` : ''}`
+      : 'Serviço geral solicitado';
+    const pergunta = await this.iaService.gerarPerguntaInteligente(categoriaContexto, historico);
+    const novoContexto: WhatsappContext = {
+      ...ctx,
+      step: 'perguntas-ia',
+      payload: { ...payload, historico, servicos, servicoAtual },
+    };
     this.context.set(chatId, novoContexto);
     return pergunta;
   }
