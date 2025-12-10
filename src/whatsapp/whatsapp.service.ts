@@ -167,10 +167,30 @@ export class WhatsappService {
   }
 
   private async iniciarDefinicaoPrecos(chatId: string) {
-    const ctx = this.context.get(chatId)!;
+    let ctx = this.context.get(chatId)!;
     if (!ctx.orcamentoId) throw new Error('Contexto de orçamento não encontrado');
 
-    const servicos = await this.orcamentosService.listarServicos(ctx.orcamentoId);
+    let servicos = await this.orcamentosService.listarServicos(ctx.orcamentoId);
+    const precisaPrecificar = servicos.some((servico) => (servico.preco ?? 0) <= 0);
+
+    if (precisaPrecificar) {
+      try {
+        servicos = await this.orcamentosService.precificarAutomaticamente(ctx.orcamentoId);
+        ctx = { ...ctx, payload: { ...ctx.payload, precificadoIa: true } };
+        this.context.set(chatId, ctx);
+        await this.sender.enviarTexto(
+          chatId,
+          'Sugeri valores automaticamente com IA para agilizar. Revise e ajuste se precisar.',
+        );
+      } catch (error) {
+        this.logger.warn(`Falha ao precificar automaticamente: ${error instanceof Error ? error.message : error}`);
+        await this.sender.enviarTexto(
+          chatId,
+          'Não consegui sugerir preços automaticamente agora. Vamos informar manualmente.',
+        );
+      }
+    }
+
     const proximoIndex = servicos.findIndex((servico) => (servico.preco ?? 0) <= 0);
 
     if (proximoIndex === -1) {

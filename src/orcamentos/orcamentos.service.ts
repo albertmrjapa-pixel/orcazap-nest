@@ -64,6 +64,35 @@ export class OrcamentosService {
     return this.prisma.servicoOrcamento.findMany({ where: { orcamentoId } });
   }
 
+  async precificarAutomaticamente(orcamentoId: string, regiao?: string) {
+    const servicos = await this.listarServicos(orcamentoId);
+    if (!servicos.length) return [];
+
+    const regiaoCliente = regiao?.trim() || 'Brasil';
+    const itens = servicos.map((servico) => ({
+      titulo: servico.titulo,
+      descricao: servico.descricao ?? undefined,
+      quantidade: servico.quantidade ?? 1,
+    }));
+
+    const sugestoes = await this.iaService.precificarPorRegiao(regiaoCliente, itens);
+
+    const atualizados = servicos.map((servico, index) => {
+      const iaItem = sugestoes[index];
+      if (!iaItem) return servico;
+
+      return {
+        ...servico,
+        preco: iaItem.precoSugerido ?? servico.preco,
+        descricao: iaItem.descricao ?? servico.descricao,
+        quantidade: iaItem.quantidade ?? servico.quantidade,
+      };
+    });
+
+    await this.registrarServicos(orcamentoId, atualizados);
+    return this.listarServicos(orcamentoId);
+  }
+
   async estimarMateriais(orcamentoId: string) {
     const servicos = await this.prisma.servicoOrcamento.findMany({ where: { orcamentoId } });
     const materiais = MateriaisBuilder.gerarEstimativa(servicos);
