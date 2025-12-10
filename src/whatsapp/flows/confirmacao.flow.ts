@@ -23,7 +23,8 @@ export class ConfirmacaoFlow {
           currency: 'BRL',
         });
         const alerta = preco <= 0 ? ' ⚠️ Defina um valor para este item.' : '';
-        return `${index + 1}. ${servico.titulo} - ${quantidade}x ${valorTexto}${alerta}`;
+        const detalhes = servico.descricao ? ` - ${servico.descricao}` : '';
+        return `${index + 1}. ${servico.titulo}${detalhes} - ${quantidade}x ${valorTexto}${alerta}`;
       })
       .join('\n');
   }
