@@ -1,0 +1,19 @@
+export const MENU_OPCOES = {
+  CRIAR_ORCAMENTO: '1',
+  COMPRAR_CREDITOS: '2',
+  MEUS_ORCAMENTOS: '3',
+  MEU_PERFIL: '4',
+  ORCAR_MATERIAIS: '5',
+  SUPORTE_IA: '6',
+};
+
+export const CONTEXT_KEYS = {
+  ULTIMA_OPCAO: 'ULTIMA_OPCAO',
+  ORCAMENTO_ATUAL: 'ORCAMENTO_ATUAL',
+};
+
+export const STATUS_ORCAMENTO = {
+  COLETANDO: 'coletando',
+  AGUARDANDO_PAGAMENTO: 'aguardando-pagamento',
+  CONCLUIDO: 'concluido',
+};

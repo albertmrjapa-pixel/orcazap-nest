@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profissional {
+  id           String      @id @default(uuid())
+  nome         String
+  email        String?
+  telefone     String
+  logoUrl      String?
+  saldo        Int          @default(0)
+  criadoEm     DateTime     @default(now())
+  atualizadoEm DateTime     @updatedAt
+
+  orcamentos   Orcamento[]
+  conversas    LogConversa[]
+  treinamentos TreinamentoIaCategoria[]
+}
+
+model Categoria {
+  id        String          @id @default(uuid())
+  nome      String
+  criadoEm  DateTime        @default(now())
+
+  perguntas PerguntaIa[]
+  treinamentos TreinamentoIaCategoria[]
+}
+
+model PerguntaIa {
+  id          String     @id @default(uuid())
+  categoriaId String
+  texto       String
+  ordem       Int
+  custo       Int         @default(1)
+
+  categoria   Categoria  @relation(fields: [categoriaId], references: [id])
+}
+
+model Orcamento {
+  id              String                @id @default(uuid())
+  codigo          Int                   @default(autoincrement())
+  profissionalId  String
+  clienteNome     String?
+  clienteTelefone String?
+  status          String                @default("coletando")
+  criadoEm        DateTime              @default(now())
+  atualizadoEm    DateTime              @updatedAt
+
+  profissional    Profissional          @relation(fields: [profissionalId], references: [id])
+  servicos        ServicoOrcamento[]
+  respostas       PerguntaRespondida[]
+  respostasFixas  RespostasFixas[]
+  materiais       MaterialEstimado[]
+}
+
+model PerguntaRespondida {
+  id          String   @id @default(uuid())
+  orcamentoId String
+  pergunta    String
+  resposta    String
+  criadoEm    DateTime @default(now())
+
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id])
+}
+
+model RespostasFixas {
+  id          String   @id @default(uuid())
+  orcamentoId String
+  campo       String
+  resposta    String
+  criadoEm    DateTime @default(now())
+
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id])
+}
+
+model ServicoOrcamento {
+  id          String   @id @default(uuid())
+  orcamentoId String
+  titulo      String
+  descricao   String?
+  quantidade  Int      @default(1)
+  preco       Float    @default(0)
+
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id])
+}
+
+model MaterialEstimado {
+  id          String  @id @default(uuid())
+  orcamentoId String
+  nome        String
+  unidade     String
+  quantidade  Float
+  precoMedio  Float
+
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id])
+}
+
+model LogConversa {
+  id             String      @id @default(uuid())
+  profissionalId String
+  mensagem       String
+  respostaIA     String?
+  criadoEm       DateTime     @default(now())
+
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
+}
+
+model TreinamentoIaCategoria {
+  id          String     @id @default(uuid())
+  categoriaId String
+  profissionalId String?
+  conteudo    String
+
+  categoria   Categoria    @relation(fields: [categoriaId], references: [id])
+  profissional Profissional? @relation(fields: [profissionalId], references: [id])
+}
