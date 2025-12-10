@@ -6,7 +6,7 @@ export class PdfService {
   private readonly logger = new Logger(PdfService.name);
 
   async gerarPdfBase64(html: string): Promise<string> {
-    const browser = await puppeteer.launch({ headless: 'new' });
+    const browser = await puppeteer.launch({ headless: true });
     try {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: 'networkidle0' });

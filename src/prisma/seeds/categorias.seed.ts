@@ -5,11 +5,11 @@ const prisma = new PrismaClient();
 async function main() {
   const categorias = ['Elétrica', 'Pintura', 'Pedreiro', 'Refrigeração'];
   for (const nome of categorias) {
-    await prisma.categoria.upsert({
-      where: { nome },
-      update: {},
-      create: { nome },
-    });
+    const categoriaExistente = await prisma.categoria.findFirst({ where: { nome } });
+
+    if (!categoriaExistente) {
+      await prisma.categoria.create({ data: { nome } });
+    }
   }
 }
 
