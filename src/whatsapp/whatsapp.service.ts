@@ -14,6 +14,7 @@ import { MateriaisFlow } from './flows/materiais.flow';
 import { MeuPerfilFlow } from './flows/meu-perfil.flow';
 import { SuporteIaFlow } from './flows/suporte-ia.flow';
 import { TtsService } from './core/tts.service';
+import { ProfissionalService } from '../profissional/profissional.service';
 
 @Injectable()
 export class WhatsappService {
@@ -33,18 +34,34 @@ export class WhatsappService {
     private readonly meuPerfilFlow: MeuPerfilFlow,
     private readonly suporteIaFlow: SuporteIaFlow,
     private readonly ttsService: TtsService,
+    private readonly profissionalService: ProfissionalService,
   ) {}
 
   async processarMensagem(chatId: string, mensagem: string) {
     const texto = mensagem.trim();
+    const telefone = this.normalizarTelefone(chatId);
     let ctx = this.context.get(chatId);
 
     if (!ctx) {
-      const cadastroMsg = await this.cadastroFlow.executar(chatId, {
-        nome: `Profissional ${chatId}`,
-        telefone: chatId,
+      const profissionalExistente = await this.profissionalService.obterPorTelefone(telefone);
+
+      if (profissionalExistente) {
+        ctx = { profissionalId: profissionalExistente.id, chatId, step: 'menu' };
+        this.context.set(chatId, ctx);
+        await this.sender.enviarTexto(
+          chatId,
+          `Bem-vindo de volta, ${profissionalExistente.nome}!\n${gerarMenuPrincipal()}`,
+        );
+        return;
+      }
+
+      this.context.set(chatId, {
+        chatId,
+        step: 'cadastro-nome',
+        payload: { telefone },
       });
-      await this.sender.enviarTexto(chatId, `${cadastroMsg}\n${gerarMenuPrincipal()}`);
+
+      await this.sender.enviarTexto(chatId, 'Olá! Precisamos dos seus dados. Qual é o seu nome completo?');
       return;
     }
 
@@ -55,6 +72,12 @@ export class WhatsappService {
     }
 
     switch (ctx.step) {
+      case 'cadastro-nome':
+        await this.tratarCadastroNome(chatId, texto);
+        break;
+      case 'cadastro-email':
+        await this.tratarCadastroEmail(chatId, texto);
+        break;
       case 'menu':
         await this.tratarMenu(chatId, texto);
         break;
@@ -182,5 +205,34 @@ export class WhatsappService {
   async aplicarAjuste(chatId: string, fator: number) {
     const mensagem = await this.ajustePrecosFlow.aplicarAjuste(chatId, fator);
     await this.sender.enviarTexto(chatId, mensagem);
+  }
+
+  private async tratarCadastroNome(chatId: string, nome: string) {
+    const ctx = this.context.get(chatId)!;
+    this.context.set(chatId, {
+      ...ctx,
+      step: 'cadastro-email',
+      payload: { ...ctx.payload, nome: nome.trim() },
+    });
+
+    await this.sender.enviarTexto(chatId, 'Ótimo! Agora, informe seu email.');
+  }
+
+  private async tratarCadastroEmail(chatId: string, email: string) {
+    const ctx = this.context.get(chatId)!;
+    const nome = ctx.payload?.nome ?? '';
+    const telefone = ctx.payload?.telefone ?? this.normalizarTelefone(chatId);
+
+    const cadastroMsg = await this.cadastroFlow.executar(chatId, {
+      nome,
+      telefone,
+      email: email.trim(),
+    });
+
+    await this.sender.enviarTexto(chatId, `${cadastroMsg}\n${gerarMenuPrincipal()}`);
+  }
+
+  private normalizarTelefone(chatId: string) {
+    return chatId.replace('@c.us', '');
   }
 }
