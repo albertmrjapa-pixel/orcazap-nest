@@ -32,6 +32,16 @@ export class OrcamentosService {
     });
   }
 
+  async atualizarDadosCliente(orcamentoId: string, nome?: string, telefone?: string) {
+    return this.prisma.orcamento.update({
+      where: { id: orcamentoId },
+      data: {
+        ...(nome ? { clienteNome: nome } : {}),
+        ...(telefone ? { clienteTelefone: telefone } : {}),
+      },
+    });
+  }
+
   async registrarServicos(
     orcamentoId: string,
     servicos: { titulo: string; descricao?: string; quantidade?: number; preco?: number }[],

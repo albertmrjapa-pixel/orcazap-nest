@@ -54,6 +54,7 @@ export class PdfBuilder {
         <body>
           <h1>Orçamento ${orcamento.codigo}</h1>
           <p><strong>Profissional:</strong> ${orcamento.profissional.nome}</p>
+          ${orcamento.clienteNome ? `<p><strong>Cliente:</strong> ${orcamento.clienteNome}</p>` : ''}
           ${orcamento.profissional.logoUrl ? `<img src="${orcamento.profissional.logoUrl}" height="80"/>` : ''}
           <h2>Serviços</h2>
           <table>
