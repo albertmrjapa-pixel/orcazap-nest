@@ -143,14 +143,17 @@ export class WhatsappService {
 
   private async tratarPerguntasIa(chatId: string, respostaAnterior: string) {
     const ctx = this.context.get(chatId)!;
-    const pergunta = await this.perguntasIaFlow.perguntar(chatId, respostaAnterior || undefined);
-    const historico = this.context.get(chatId)!.payload?.historico ?? [];
-    if (historico.length >= 3) {
+    const resultado = await this.perguntasIaFlow.perguntar(chatId, respostaAnterior || undefined);
+
+    if (resultado.finalizado) {
       this.context.set(chatId, { ...ctx, step: 'perguntas-fixas', payload: { fixaIndex: 0 } });
       const primeira = this.perguntasFixasFlow.proximaPergunta(0);
       await this.sender.enviarTexto(chatId, `Perguntas finais: ${primeira}`);
-    } else {
-      await this.sender.enviarTexto(chatId, pergunta);
+      return;
+    }
+
+    if (resultado.pergunta) {
+      await this.sender.enviarTexto(chatId, resultado.pergunta);
     }
   }
 

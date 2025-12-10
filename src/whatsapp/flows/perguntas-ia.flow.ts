@@ -12,7 +12,7 @@ export class PerguntasIaFlow {
     private readonly context: WhatsappContextStore,
   ) {}
 
-  async perguntar(chatId: string, respostaAnterior?: string) {
+  async perguntar(chatId: string, respostaAnterior?: string): Promise<{ pergunta?: string; finalizado: boolean }> {
     const ctx = this.context.get(chatId);
     if (!ctx?.orcamentoId) throw new Error('Contexto de orçamento não encontrado');
     const payload = ctx.payload ?? {};
@@ -24,6 +24,38 @@ export class PerguntasIaFlow {
       historico.push(respostaAnterior);
       await this.orcamentosService.registrarResposta(ctx.orcamentoId, `Pergunta ${historico.length}`, respostaAnterior);
     }
+    const atingiuLimitePerguntas = historico.length >= 3;
+
+    if (atingiuLimitePerguntas) {
+      const possuiProximoServico = servicoAtual + 1 < servicos.length;
+      if (possuiProximoServico) {
+        const proximoServicoAtual = servicoAtual + 1;
+        const proximoServico = servicos[proximoServicoAtual];
+        const categoriaProximoServico = `Serviço: ${proximoServico.titulo}${
+          proximoServico.descricao ? ` - ${proximoServico.descricao}` : ''
+        }`;
+        const perguntaProximaCategoria = await this.iaService.gerarPerguntaInteligente(
+          categoriaProximoServico,
+          [],
+        );
+        const novoContexto: WhatsappContext = {
+          ...ctx,
+          step: 'perguntas-ia',
+          payload: { ...payload, historico: [], servicos, servicoAtual: proximoServicoAtual },
+        };
+        this.context.set(chatId, novoContexto);
+        return { pergunta: perguntaProximaCategoria, finalizado: false };
+      }
+
+      this.context.set(chatId, {
+        ...ctx,
+        step: 'perguntas-ia',
+        payload: { ...payload, historico, servicos, servicoAtual },
+      });
+
+      return { finalizado: true };
+    }
+
     const categoriaContexto = servicoContexto
       ? `Serviço: ${servicoContexto.titulo}${servicoContexto.descricao ? ` - ${servicoContexto.descricao}` : ''}`
       : 'Serviço geral solicitado';
@@ -34,6 +66,6 @@ export class PerguntasIaFlow {
       payload: { ...payload, historico, servicos, servicoAtual },
     };
     this.context.set(chatId, novoContexto);
-    return pergunta;
+    return { pergunta, finalizado: false };
   }
 }
