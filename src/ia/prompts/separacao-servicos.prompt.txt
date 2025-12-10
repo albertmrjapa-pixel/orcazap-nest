@@ -1,0 +1,1 @@
+Identifique serviços distintos na descrição enviada pelo cliente. Retorne uma lista com título curto e breve descrição para cada um.
