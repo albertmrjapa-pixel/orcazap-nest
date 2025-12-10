@@ -90,11 +90,18 @@ export class WhatsappService {
       case 'perguntas-fixas':
         await this.tratarPerguntasFixas(chatId, texto);
         break;
+      case 'definir-precos':
+        await this.tratarDefinicaoPrecos(chatId, texto);
+        break;
       case 'confirmacao':
         await this.tratarConfirmacao(chatId, texto);
         break;
       case 'pagamento':
         await this.sender.enviarTexto(chatId, 'Aguardando confirmação do PIX.');
+        break;
+      case 'finalizado':
+        this.context.set(chatId, { ...ctx, step: 'menu' });
+        await this.tratarMenu(chatId, texto);
         break;
       default:
         await this.sender.enviarTexto(chatId, gerarMenuPrincipal());
@@ -153,9 +160,76 @@ export class WhatsappService {
       this.context.set(chatId, { ...ctx, payload: { fixaIndex: index + 1 }, step: 'perguntas-fixas' });
       await this.sender.enviarTexto(chatId, proxima);
     } else {
+      await this.iniciarDefinicaoPrecos(chatId);
+    }
+  }
+
+  private async iniciarDefinicaoPrecos(chatId: string) {
+    const ctx = this.context.get(chatId)!;
+    if (!ctx.orcamentoId) throw new Error('Contexto de orçamento não encontrado');
+
+    const servicos = await this.orcamentosService.listarServicos(ctx.orcamentoId);
+    const proximoIndex = servicos.findIndex((servico) => (servico.preco ?? 0) <= 0);
+
+    if (proximoIndex === -1) {
       const mensagem = await this.confirmacaoFlow.solicitarConfirmacao(chatId);
       await this.sender.enviarTexto(chatId, mensagem);
+      return;
     }
+
+    const servico = servicos[proximoIndex];
+    this.context.set(chatId, {
+      ...ctx,
+      step: 'definir-precos',
+      payload: { ...ctx.payload, precoIndex: proximoIndex },
+    });
+
+    await this.sender.enviarTexto(
+      chatId,
+      `Qual o valor para "${servico.titulo}" (quantidade ${servico.quantidade})? Responda somente com o número em reais.`,
+    );
+  }
+
+  private async tratarDefinicaoPrecos(chatId: string, valorTexto: string) {
+    const ctx = this.context.get(chatId)!;
+    const indice = ctx.payload?.precoIndex ?? 0;
+
+    const valor = parseFloat(valorTexto.replace(/\./g, '').replace(',', '.'));
+    if (isNaN(valor) || valor <= 0) {
+      await this.sender.enviarTexto(chatId, 'Informe um valor numérico maior que zero, por favor.');
+      return;
+    }
+
+    const servicos = await this.orcamentosService.listarServicos(ctx.orcamentoId!);
+    if (indice < 0 || indice >= servicos.length) {
+      await this.sender.enviarTexto(chatId, 'Não consegui identificar o serviço. Vamos revisar.');
+      await this.iniciarDefinicaoPrecos(chatId);
+      return;
+    }
+
+    const atualizados = servicos.map((servico, idx) =>
+      idx === indice ? { ...servico, preco: valor } : servico,
+    );
+    await this.orcamentosService.registrarServicos(ctx.orcamentoId!, atualizados);
+
+    const proximoIndex = atualizados.findIndex((servico) => (servico.preco ?? 0) <= 0);
+    if (proximoIndex === -1) {
+      const mensagem = await this.confirmacaoFlow.solicitarConfirmacao(chatId);
+      await this.sender.enviarTexto(chatId, mensagem);
+      return;
+    }
+
+    const proximoServico = atualizados[proximoIndex];
+    this.context.set(chatId, {
+      ...ctx,
+      step: 'definir-precos',
+      payload: { ...ctx.payload, precoIndex: proximoIndex },
+    });
+
+    await this.sender.enviarTexto(
+      chatId,
+      `Anotei. Qual o valor para "${proximoServico.titulo}" (quantidade ${proximoServico.quantidade})?`,
+    );
   }
 
   private async tratarConfirmacao(chatId: string, texto: string) {
