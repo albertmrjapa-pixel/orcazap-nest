@@ -16,6 +16,7 @@ import { SuporteIaFlow } from './flows/suporte-ia.flow';
 import { TtsService } from './core/tts.service';
 import { ProfissionalService } from '../profissional/profissional.service';
 import { OrcamentosService } from '../orcamentos/orcamentos.service';
+import { WhatsappContext } from './types/whatsapp-context.type';
 
 @Injectable()
 export class WhatsappService {
@@ -68,7 +69,7 @@ export class WhatsappService {
     }
 
     if (texto.toLowerCase() === 'menu') {
-      this.context.set(chatId, { ...ctx, step: 'menu' });
+      this.context.set(chatId, this.criarContextoBase(ctx));
       await this.sender.enviarTexto(chatId, gerarMenuPrincipal());
       return;
     }
@@ -102,7 +103,7 @@ export class WhatsappService {
         await this.sender.enviarTexto(chatId, 'Aguardando confirmação do PIX.');
         break;
       case 'finalizado':
-        this.context.set(chatId, { ...ctx, step: 'menu' });
+        this.context.set(chatId, this.criarContextoBase(ctx));
         await this.tratarMenu(chatId, texto);
         break;
       default:
@@ -113,7 +114,7 @@ export class WhatsappService {
   private async tratarMenu(chatId: string, opcao: string) {
     const ctx = this.context.get(chatId)!;
     if (opcao === MENU_OPCOES.CRIAR_ORCAMENTO) {
-      this.context.set(chatId, { ...ctx, step: 'coleta-descricao' });
+      this.context.set(chatId, { ...this.criarContextoBase(ctx), step: 'coleta-descricao' });
       await this.sender.enviarTexto(chatId, 'Descreva o serviço que deseja orçar.');
     } else if (opcao === MENU_OPCOES.COMPRAR_CREDITOS) {
       const resposta = this.pagamentoFlow.iniciar(chatId, 20);
@@ -333,5 +334,15 @@ export class WhatsappService {
 
   private normalizarTelefone(chatId: string) {
     return chatId.replace('@c.us', '');
+  }
+
+  private criarContextoBase(ctx: WhatsappContext) {
+    return {
+      chatId: ctx.chatId,
+      profissionalId: ctx.profissionalId,
+      step: 'menu',
+      payload: undefined,
+      orcamentoId: undefined,
+    } as WhatsappContext;
   }
 }
