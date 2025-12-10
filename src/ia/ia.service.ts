@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { IaPrompt, IaModels } from './types/ia-types';
+import { perguntasBasePrompt } from './prompts/perguntas-inteligentes/base.prompt';
+import { categoriaPrompts, detectarCategoriaPergunta } from './prompts/perguntas-inteligentes/categorias';
+import { precificacaoPorRegiaoPrompt } from './prompts/precificacao-por-regiao.prompt';
+import { IaItemPrecificado } from './types/ia-precificacao.type';
 import { IA_ERRORS } from './types/ia-errors';
+import { IaPrompt, IaModels } from './types/ia-types';
 
 @Injectable()
 export class IaService {
@@ -22,18 +26,22 @@ export class IaService {
     const resposta = await this.client.chat.completions.create({
       model: this.model,
       messages: mensagens,
-      max_tokens: 200,
+      max_tokens: 500,
+      temperature: 0.2,
     });
     const output = resposta.choices[0]?.message?.content;
     if (!output) throw new Error(IA_ERRORS.RESPOSTA_VAZIA);
-    return output;
+    return output.trim();
   }
 
   async gerarPerguntaInteligente(categoria: string, historico: string[]) {
+    const categoriaDetectada = detectarCategoriaPergunta(categoria);
     const prompt: IaPrompt = {
-      system:
-        'Você é um assistente que coleta informações de orçamento apenas para serviços. Não vendemos produtos: materiais ou itens citados pelo cliente servem apenas para entender o serviço e, se necessário, confirmar se o profissional leva ou se o cliente vai fornecer. Identifique a categoria implícita e faça uma única pergunta objetiva e específica por vez (local, data, quantidade de pessoas ou itens, medidas, duração ou prazo, orçamento disponível). Não repita informações já respondidas no histórico, não invente etapas de planejamento ou itens extras e nunca ofereça ou organize entrega de produtos. Vá direto ao ponto que falta para fechar o escopo do serviço.',
+      system: [perguntasBasePrompt, categoriaDetectada ? categoriaPrompts[categoriaDetectada] : '']
+        .filter(Boolean)
+        .join('\n\n'),
     };
+
     return this.perguntar(prompt, [`Categoria: ${categoria}`, ...historico]);
   }
 
@@ -60,6 +68,25 @@ export class IaService {
       `Respostas fixas: ${orcamento.respostasFixas.map((r: any) => `${r.campo}: ${r.resposta}`).join('; ')}`,
     ];
     return this.perguntar(prompt, contexto);
+  }
+
+  async precificarPorRegiao(
+    regiao: string,
+    itens: { titulo: string; descricao?: string; quantidade?: number }[],
+  ): Promise<IaItemPrecificado[]> {
+    const prompt: IaPrompt = { system: precificacaoPorRegiaoPrompt };
+    const resposta = await this.perguntar(prompt, [
+      `Região do cliente: ${regiao}`,
+      `Itens do orçamento: ${JSON.stringify(itens)}`,
+    ]);
+
+    try {
+      const itensPrecificados = JSON.parse(resposta) as IaItemPrecificado[];
+      if (!Array.isArray(itensPrecificados)) throw new Error(IA_ERRORS.FORMATO_INVALIDO);
+      return itensPrecificados;
+    } catch {
+      throw new Error(IA_ERRORS.FORMATO_INVALIDO);
+    }
   }
 
   async suporte(pergunta: string, historico: string[] = []) {
