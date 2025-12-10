@@ -1,5 +1,5 @@
 export interface WhatsappContext {
-  profissionalId: string;
+  profissionalId?: string;
   chatId: string;
   step: string;
   orcamentoId?: string;
