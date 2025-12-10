@@ -13,7 +13,7 @@ import { AjustePrecosFlow } from './flows/ajuste-precos.flow';
 import { MateriaisFlow } from './flows/materiais.flow';
 import { MeuPerfilFlow } from './flows/meu-perfil.flow';
 import { SuporteIaFlow } from './flows/suporte-ia.flow';
-import { AudioPlayer } from './core/audio-player';
+import { TtsService } from './core/tts.service';
 
 @Injectable()
 export class WhatsappService {
@@ -32,7 +32,7 @@ export class WhatsappService {
     private readonly materiaisFlow: MateriaisFlow,
     private readonly meuPerfilFlow: MeuPerfilFlow,
     private readonly suporteIaFlow: SuporteIaFlow,
-    private readonly audioPlayer: AudioPlayer,
+    private readonly ttsService: TtsService,
   ) {}
 
   async processarMensagem(chatId: string, mensagem: string) {
@@ -129,10 +129,18 @@ export class WhatsappService {
     } else {
       const mensagem = await this.confirmacaoFlow.finalizar(chatId);
       await this.sender.enviarTexto(chatId, mensagem);
-      const audio = await this.audioPlayer.sintetizar('Seu orçamento está pronto!');
-      if (audio) {
-        await this.sender.enviarAudio(chatId, audio);
-      }
+      const audio = await this.ttsService.gerarAudio(
+        'Seu orçamento está pronto!',
+        `orcamento-${chatId}`,
+      );
+
+      await this.sender.enviarAudio(
+        chatId,
+        audio.base64,
+        audio.mimeType,
+        audio.filename,
+        false,
+      );
     }
   }
 

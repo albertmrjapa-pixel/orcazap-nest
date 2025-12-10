@@ -13,7 +13,13 @@ export class WhatsappSender {
     await this.client.sendPdf(chatId, base64, filename);
   }
 
-  async enviarAudio(chatId: string, base64: string) {
-    await this.client.sendAudio(chatId, base64);
+  async enviarAudio(
+    chatId: string,
+    base64: string,
+    mimeType?: string,
+    filename?: string,
+    enviarComoVoz?: boolean,
+  ) {
+    await this.client.sendAudio(chatId, base64, mimeType, filename, enviarComoVoz);
   }
 }
