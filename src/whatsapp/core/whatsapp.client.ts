@@ -48,9 +48,16 @@ export class WhatsappClient {
     await this.client.sendMessage(chatId, media);
   }
 
-  async sendAudio(chatId: string, base64Audio: string) {
-    const media = new MessageMedia('audio/ogg; codecs=opus', base64Audio, 'audio.ogg');
-    await this.client.sendMessage(chatId, media, { sendAudioAsVoice: true });
+  async sendAudio(
+    chatId: string,
+    base64Audio: string,
+    mimeType = 'audio/ogg; codecs=opus',
+    filename = 'audio.ogg',
+    sendAsVoice = true,
+  ) {
+    const media = new MessageMedia(mimeType, base64Audio, filename);
+    const options = sendAsVoice ? { sendAudioAsVoice: true } : undefined;
+    await this.client.sendMessage(chatId, media, options);
   }
 
   onMessage(callback: (msg: any) => void) {

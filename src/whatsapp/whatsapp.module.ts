@@ -4,7 +4,7 @@ import { WhatsappGateway } from './whatsapp.gateway';
 import { WhatsappClient } from './core/whatsapp.client';
 import { WhatsappSender } from './core/whatsapp.sender';
 import { WhatsappContextStore } from './core/whatsapp.context';
-import { AudioPlayer } from './core/audio-player';
+import { TtsService } from './core/tts.service';
 import { CadastroFlow } from './flows/cadastro.flow';
 import { ColetaFlow } from './flows/coleta.flow';
 import { PerguntasIaFlow } from './flows/perguntas-ia.flow';
@@ -28,7 +28,7 @@ import { ProfissionalModule } from '../profissional/profissional.module';
     WhatsappClient,
     WhatsappSender,
     WhatsappContextStore,
-    AudioPlayer,
+    TtsService,
     CadastroFlow,
     ColetaFlow,
     PerguntasIaFlow,
