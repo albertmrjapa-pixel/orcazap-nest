@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode-terminal';
 
@@ -8,8 +10,22 @@ export class WhatsappClient {
   private client: Client;
 
   constructor() {
+    const clientId = 'orcazap';
+    const dataPath = join(process.cwd(), '.wwebjs_auth');
+    const sessionPath = join(dataPath, `session-${clientId}`);
+
+    if (!existsSync(dataPath)) {
+      mkdirSync(dataPath, { recursive: true });
+    }
+
+    if (existsSync(sessionPath)) {
+      this.logger.log('Reutilizando sessão existente do WhatsApp.');
+    } else {
+      this.logger.log('Nenhuma sessão local encontrada, será necessário escanear o QR Code.');
+    }
+
     this.client = new Client({
-      authStrategy: new LocalAuth({ clientId: 'orcazap' }),
+      authStrategy: new LocalAuth({ clientId, dataPath }),
     });
     this.registerEvents();
     this.client.initialize();
