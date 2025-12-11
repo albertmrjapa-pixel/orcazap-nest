@@ -48,14 +48,34 @@ export class IaService {
     const resposta = await this.perguntar(prompt, [`Categoria: ${categoria}`, ...historico]);
 
     try {
-      const parsed = JSON.parse(resposta) as { pergunta?: string; finalizado?: boolean };
-      if (!parsed.pergunta || typeof parsed.finalizado !== 'boolean') {
-        throw new Error(IA_ERRORS.FORMATO_INVALIDO);
-      }
+      const parsed = this.parsePerguntaJson(resposta);
       return { pergunta: parsed.pergunta, finalizado: parsed.finalizado };
     } catch (error) {
       throw new Error(IA_ERRORS.FORMATO_INVALIDO);
     }
+  }
+
+  private parsePerguntaJson(resposta: string): { pergunta: string; finalizado: boolean } {
+    const limpar = resposta
+      .replace(/^```json\s*/i, '')
+      .replace(/^```/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    const trechoJson = this.extrairPrimeiroObjetoJson(limpar);
+    const parsed = JSON.parse(trechoJson) as { pergunta?: string; finalizado?: boolean };
+
+    if (!parsed.pergunta || typeof parsed.finalizado !== 'boolean') {
+      throw new Error(IA_ERRORS.FORMATO_INVALIDO);
+    }
+
+    return { pergunta: parsed.pergunta, finalizado: parsed.finalizado };
+  }
+
+  private extrairPrimeiroObjetoJson(texto: string): string {
+    const match = texto.match(/\{[\s\S]*\}/);
+    if (match) return match[0];
+    return texto;
   }
 
   async separarServicos(descricao: string) {
