@@ -17,6 +17,8 @@ export class PerguntasIaFlow {
     if (!ctx?.orcamentoId) throw new Error('Contexto de orçamento não encontrado');
     const payload = ctx.payload ?? {};
     let historico: string[] = payload.historico ?? [];
+    let historicoGlobal: string[] = payload.historicoGlobal ?? [];
+    let localizacao: { cidadeEstado?: string; bairro?: string } = payload.localizacao ?? {};
     const servicos = payload.servicos ?? [];
     let servicoAtual = payload.servicoAtual ?? 0;
     let finalizando = payload.finalizando ?? false;
@@ -28,6 +30,10 @@ export class PerguntasIaFlow {
         : respostaAnterior;
 
       historico.push(registroHistorico);
+      if (this.isPerguntaLocalizacao(perguntaRegistrada)) {
+        historicoGlobal = [...historicoGlobal, registroHistorico];
+        localizacao = this.atualizarLocalizacao(localizacao, perguntaRegistrada, respostaAnterior);
+      }
       await this.orcamentosService.registrarResposta(ctx.orcamentoId, perguntaRegistrada, respostaAnterior);
 
       if (finalizando) {
@@ -40,7 +46,15 @@ export class PerguntasIaFlow {
           this.context.set(chatId, {
             ...ctx,
             step: 'perguntas-ia',
-            payload: { ...payload, historico, servicos, servicoAtual, finalizando: false },
+            payload: {
+              ...payload,
+              historico,
+              historicoGlobal,
+              localizacao,
+              servicos,
+              servicoAtual,
+              finalizando: false,
+            },
           });
 
           return { finalizado: true };
@@ -51,13 +65,51 @@ export class PerguntasIaFlow {
     const descricaoContexto = servicoContexto
       ? `Serviço: ${servicoContexto.titulo}${servicoContexto.descricao ? ` - ${servicoContexto.descricao}` : ''}`
       : 'Serviço geral solicitado';
-    const { pergunta, finalizado } = await this.iaService.gerarPerguntaInteligente(descricaoContexto, historico);
+    const historicoComum = [...historicoGlobal, ...historico];
+    const { pergunta, finalizado } = await this.iaService.gerarPerguntaInteligente(
+      descricaoContexto,
+      historicoComum,
+      localizacao,
+    );
     const novoContexto: WhatsappContext = {
       ...ctx,
       step: 'perguntas-ia',
-      payload: { ...payload, historico, servicos, servicoAtual, finalizando: finalizado, ultimaPergunta: pergunta },
+      payload: {
+        ...payload,
+        historico,
+        historicoGlobal,
+        localizacao,
+        servicos,
+        servicoAtual,
+        finalizando: finalizado,
+        ultimaPergunta: pergunta,
+      },
     };
     this.context.set(chatId, novoContexto);
     return { pergunta, finalizado: false };
+  }
+
+  private isPerguntaLocalizacao(pergunta: string): boolean {
+    const texto = pergunta.toLowerCase();
+    return texto.includes('cidade') || texto.includes('estado') || texto.includes('bairro');
+  }
+
+  private atualizarLocalizacao(
+    atual: { cidadeEstado?: string; bairro?: string },
+    pergunta: string,
+    resposta: string,
+  ): { cidadeEstado?: string; bairro?: string } {
+    const texto = pergunta.toLowerCase();
+    const novo = { ...atual };
+
+    if (texto.includes('cidade') || texto.includes('estado')) {
+      novo.cidadeEstado = resposta.trim();
+    }
+
+    if (texto.includes('bairro')) {
+      novo.bairro = resposta.trim();
+    }
+
+    return novo;
   }
 }
