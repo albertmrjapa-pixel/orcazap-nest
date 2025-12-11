@@ -6,4 +6,5 @@ export interface IaItemPrecificado {
   precoMaximo: number;
   precoSugerido: number;
   observacoes?: string;
+  incluir?: boolean;
 }

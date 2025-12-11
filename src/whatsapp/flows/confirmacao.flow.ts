@@ -58,7 +58,14 @@ export class ConfirmacaoFlow {
         ? '\n⚠️ Há serviços sem valor definido. Atualize-os antes de confirmar.'
         : '';
 
-    const resumoInterno = `\n\nResumo interno para o profissional:\n- Cliente final: ${clienteNome}\n- Total geral: ${totalFormatado}\n- Itens listados acima com valores calculados.\nAviso: Revise os valores antes de gerar o PDF final.`;
+    const respostasProfissional = (orcamento?.respostas ?? [])
+      .map((r) => `- ${r.pergunta}: ${r.resposta}`)
+      .join('\n');
+    const respostasFixas = (orcamento?.respostasFixas ?? [])
+      .map((r) => `- ${r.campo}: ${r.resposta}`)
+      .join('\n');
+
+    const resumoInterno = `\n\nResumo interno para o profissional:\n- Cliente final: ${clienteNome}\n- Total geral: ${totalFormatado}\n- Itens listados acima com valores calculados.\n- Informações fornecidas:\n${respostasProfissional || '- (sem respostas registradas)'}\n- Respostas fixas:\n${respostasFixas || '- (sem respostas fixas ainda)'}\nAviso: Revise os valores antes de gerar o PDF final.`;
 
     return `Revise os valores dos serviços:\n${lista}\n\nTotal: ${total.toLocaleString('pt-BR', {
       style: 'currency',

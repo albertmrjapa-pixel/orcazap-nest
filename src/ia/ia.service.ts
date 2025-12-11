@@ -95,22 +95,29 @@ export class IaService {
       system:
         'Crie um resumo humanizado do orçamento, destacando valor, prazo e próximos passos de forma cordial.',
     };
+    const respostasProfissional = (orcamento.respostas ?? [])
+      .map((r: any) => `${r.pergunta}: ${r.resposta}`)
+      .join(' | ');
+
     const contexto = [
       `Profissional: ${orcamento.profissional.nome}`,
       `Serviços: ${orcamento.servicos.map((s: any) => `${s.titulo} (${s.preco})`).join(', ')}`,
       `Respostas fixas: ${orcamento.respostasFixas.map((r: any) => `${r.campo}: ${r.resposta}`).join('; ')}`,
-    ];
+      respostasProfissional ? `Respostas do profissional: ${respostasProfissional}` : '',
+    ].filter(Boolean);
     return this.perguntar(prompt, contexto);
   }
 
   async precificarPorRegiao(
     regiao: string,
     itens: { titulo: string; descricao?: string; quantidade?: number }[],
+    contextoDetalhado: string[] = [],
   ): Promise<IaItemPrecificado[]> {
     const prompt: IaPrompt = { system: precificacaoPorRegiaoPrompt };
     const resposta = await this.perguntar(prompt, [
       `Região do cliente: ${regiao}`,
       `Itens do orçamento: ${JSON.stringify(itens)}`,
+      ...contextoDetalhado,
     ]);
 
     try {
