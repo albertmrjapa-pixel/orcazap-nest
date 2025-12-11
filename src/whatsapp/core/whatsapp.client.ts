@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode-terminal';
@@ -11,7 +11,8 @@ export class WhatsappClient {
 
   constructor() {
     const clientId = 'orcazap';
-    const dataPath = join(process.cwd(), '.wwebjs_auth');
+    const dataPath =
+      process.env.WHATSAPP_AUTH_PATH || join(process.cwd(), 'storage', 'whatsapp-auth');
     const sessionPath = join(dataPath, `session-${clientId}`);
 
     if (!existsSync(dataPath)) {
@@ -37,6 +38,34 @@ export class WhatsappClient {
       qrcode.generate(qr, { small: true });
     });
     this.client.on('ready', () => this.logger.log('Cliente WhatsApp conectado'));
+    this.client.on('authenticated', () =>
+      this.logger.log('Sessão do WhatsApp autenticada e salva localmente.'),
+    );
+    this.client.on('auth_failure', () => {
+      this.logger.warn('Falha de autenticação. Limpando sessão para forçar novo QR Code.');
+      this.limparSessao();
+    });
+    this.client.on('disconnected', (reason) => {
+      this.logger.warn(`Cliente desconectado (${reason}). Tentando reconectar com sessão salva.`);
+      this.client.initialize();
+    });
+  }
+
+  private limparSessao() {
+    const authStrategy = this.client?.options?.authStrategy as LocalAuth | undefined;
+    // LocalAuth armazena as sessões em dataPath/session-${clientId}
+    const dataPath = authStrategy?.dataPath as string | undefined;
+    const clientId = (authStrategy as any)?.clientId as string | undefined;
+
+    if (!dataPath || !clientId) {
+      return;
+    }
+
+    const sessionFolder = join(dataPath, `session-${clientId}`);
+    if (existsSync(sessionFolder)) {
+      rmSync(sessionFolder, { recursive: true, force: true });
+      this.logger.log(`Sessão removida em ${sessionFolder}`);
+    }
   }
 
   async sendText(chatId: string, message: string) {
