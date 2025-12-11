@@ -3,6 +3,7 @@ import { IaService } from '../../ia/ia.service';
 import { OrcamentosService } from '../../orcamentos/orcamentos.service';
 import { WhatsappContextStore } from '../core/whatsapp.context';
 import { WhatsappContext } from '../types/whatsapp-context.type';
+import { ProfissionalService } from '../../profissional/profissional.service';
 
 @Injectable()
 export class PerguntasIaFlow {
@@ -10,6 +11,7 @@ export class PerguntasIaFlow {
     private readonly iaService: IaService,
     private readonly orcamentosService: OrcamentosService,
     private readonly context: WhatsappContextStore,
+    private readonly profissionalService: ProfissionalService,
   ) {}
 
   async perguntar(chatId: string, respostaAnterior?: string): Promise<{ pergunta?: string; finalizado: boolean }> {
@@ -71,6 +73,11 @@ export class PerguntasIaFlow {
       historicoComum,
       localizacao,
     );
+
+    if (pergunta && ctx.profissionalId) {
+      await this.profissionalService.debitarSaldo(ctx.profissionalId, 1);
+    }
+
     const novoContexto: WhatsappContext = {
       ...ctx,
       step: 'perguntas-ia',
