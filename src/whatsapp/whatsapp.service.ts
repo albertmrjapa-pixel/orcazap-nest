@@ -110,6 +110,10 @@ export class WhatsappService {
       case 'confirmacao-alterar-valor':
         await this.tratarConfirmacaoValor(chatId, texto);
         break;
+      case 'pagamento-escolha':
+        const respostaPagamento = await this.pagamentoFlow.processarEscolha(chatId, texto);
+        await this.sender.enviarTexto(chatId, respostaPagamento);
+        break;
       case 'pagamento':
         await this.sender.enviarTexto(chatId, 'Aguardando confirmação do PIX.');
         break;
@@ -133,7 +137,7 @@ export class WhatsappService {
       this.context.set(chatId, { ...this.criarContextoBase(ctx), step: 'coleta-descricao' });
       await this.sender.enviarTexto(chatId, 'Descreva o serviço que deseja orçar.');
     } else if (opcaoNormalizada === MENU_OPCOES.COMPRAR_CREDITOS) {
-      const resposta = await this.pagamentoFlow.iniciar(chatId, 19.9);
+      const resposta = await this.pagamentoFlow.solicitarValorRecarga(chatId);
       await this.sender.enviarTexto(chatId, resposta);
     } else if (opcaoNormalizada === MENU_OPCOES.MEUS_ORCAMENTOS) {
       await this.sender.enviarTexto(chatId, 'Em breve listaremos seus orçamentos anteriores.');
