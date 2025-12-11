@@ -41,6 +41,13 @@ export class ConfirmacaoFlow {
     const total = CalculadoraOrcamento.calcularTotal(servicos);
     const lista = this.formatarServicos(servicos);
     const possuiValorZerado = servicos.some((s) => (s.preco ?? 0) <= 0);
+    const orcamento = await this.orcamentosService.obterDadosBasicos(orcamentoId);
+
+    const clienteNome = orcamento?.clienteNome || 'Não informado';
+    const totalFormatado = total.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
 
     this.context.set(chatId, { ...this.context.get(chatId)!, step: 'confirmacao' });
 
@@ -51,10 +58,12 @@ export class ConfirmacaoFlow {
         ? '\n⚠️ Há serviços sem valor definido. Atualize-os antes de confirmar.'
         : '';
 
+    const resumoInterno = `\n\nResumo interno para o profissional:\n- Cliente final: ${clienteNome}\n- Total geral: ${totalFormatado}\n- Itens listados acima com valores calculados.\nAviso: Revise os valores antes de gerar o PDF final.`;
+
     return `Revise os valores dos serviços:\n${lista}\n\nTotal: ${total.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    })}${alertaTotal}\n${instrucoes}`;
+    })}${alertaTotal}${resumoInterno}\n${instrucoes}`;
   }
 
   async alterarValor(chatId: string, indice: number, novoValor: number) {

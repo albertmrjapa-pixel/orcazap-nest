@@ -32,6 +32,13 @@ export class OrcamentosService {
     });
   }
 
+  async obterDadosBasicos(orcamentoId: string) {
+    return this.prisma.orcamento.findUnique({
+      where: { id: orcamentoId },
+      include: { respostasFixas: true },
+    });
+  }
+
   async atualizarDadosCliente(orcamentoId: string, nome?: string, telefone?: string) {
     return this.prisma.orcamento.update({
       where: { id: orcamentoId },
@@ -85,10 +92,10 @@ export class OrcamentosService {
 
       return {
         ...servico,
-        titulo: iaItem.titulo?.trim() || servico.titulo,
+        titulo: servico.titulo,
         preco: precoSugerido ?? servico.preco,
         descricao: iaItem.descricao ?? servico.descricao,
-        quantidade: iaItem.quantidade ?? servico.quantidade,
+        quantidade: servico.quantidade,
       };
     });
 
