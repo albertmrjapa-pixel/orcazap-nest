@@ -6,7 +6,10 @@ export class PixController {
   constructor(private readonly service: PixService) {}
 
   @Post('webhook')
-  async webhook(@Body() body: { profissionalId: string; valor: number }) {
-    return this.service.confirmarPagamento(body.profissionalId, body.valor);
+  async webhook(@Body() body: Record<string, any>) {
+    const txid = body?.pix?.[0]?.txid || body?.txid;
+    if (!txid) return { status: 'ignored' };
+
+    return this.service.confirmarPagamento(txid);
   }
 }

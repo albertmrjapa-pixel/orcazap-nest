@@ -35,9 +35,23 @@ export class ProfissionalService {
   async debitarSaldo(profissionalId: string, valor: number) {
     if (valor <= 0) return;
 
+    const profissional = await this.obter(profissionalId);
+    if (!profissional || profissional.saldo <= 0) return;
+
+    const decremento = Math.min(valor, profissional.saldo);
+
     return this.prisma.profissional.update({
       where: { id: profissionalId },
-      data: { saldo: { decrement: valor } },
+      data: { saldo: { decrement: decremento } },
+    });
+  }
+
+  async adicionarSaldo(profissionalId: string, valor: number) {
+    if (valor <= 0) return;
+
+    return this.prisma.profissional.update({
+      where: { id: profissionalId },
+      data: { saldo: { increment: valor } },
     });
   }
 }

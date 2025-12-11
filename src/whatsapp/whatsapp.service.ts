@@ -122,10 +122,13 @@ export class WhatsappService {
     const opcaoNormalizada = this.normalizarOpcaoMenu(opcao);
 
     if (opcaoNormalizada === MENU_OPCOES.CRIAR_ORCAMENTO) {
+      const possuiSaldo = await this.garantirSaldo(chatId);
+      if (!possuiSaldo) return;
+
       this.context.set(chatId, { ...this.criarContextoBase(ctx), step: 'coleta-descricao' });
       await this.sender.enviarTexto(chatId, 'Descreva o serviço que deseja orçar.');
     } else if (opcaoNormalizada === MENU_OPCOES.COMPRAR_CREDITOS) {
-      const resposta = this.pagamentoFlow.iniciar(chatId, 20);
+      const resposta = await this.pagamentoFlow.iniciar(chatId, 19.9);
       await this.sender.enviarTexto(chatId, resposta);
     } else if (opcaoNormalizada === MENU_OPCOES.MEUS_ORCAMENTOS) {
       await this.sender.enviarTexto(chatId, 'Em breve listaremos seus orçamentos anteriores.');
@@ -141,6 +144,26 @@ export class WhatsappService {
     } else {
       await this.sender.enviarTexto(chatId, 'Opção inválida. Digite menu para ver opções.');
     }
+  }
+
+  private async garantirSaldo(chatId: string) {
+    const ctx = this.context.get(chatId);
+    if (!ctx?.profissionalId) return false;
+
+    const profissional = await this.profissionalService.obter(ctx.profissionalId);
+    if (!profissional) {
+      await this.sender.enviarTexto(chatId, 'Não encontramos seu cadastro. Vamos começar novamente.');
+      this.context.set(chatId, { chatId, step: 'cadastro-nome', payload: { telefone: this.normalizarTelefone(chatId) } });
+      return false;
+    }
+
+    if (profissional.saldo <= 0) {
+      const mensagem = await this.pagamentoFlow.iniciarRecargaPadrao(chatId);
+      await this.sender.enviarTexto(chatId, mensagem);
+      return false;
+    }
+
+    return true;
   }
 
   private normalizarOpcaoMenu(opcao: string): string {
@@ -179,6 +202,9 @@ export class WhatsappService {
 
   private async tratarPerguntasIa(chatId: string, respostaAnterior: string) {
     const ctx = this.context.get(chatId)!;
+    const possuiSaldo = await this.garantirSaldo(chatId);
+    if (!possuiSaldo) return;
+
     const resultado = await this.perguntasIaFlow.perguntar(chatId, respostaAnterior || undefined);
 
     if (resultado.finalizado) {
