@@ -40,6 +40,11 @@ export class WhatsappService {
     private readonly orcamentosService: OrcamentosService,
   ) {}
 
+  async enviarMensagem(telefone: string, mensagem: string) {
+    const chatId = telefone.includes('@') ? telefone : `${telefone}@c.us`;
+    await this.sender.enviarTexto(chatId, mensagem);
+  }
+
   async processarMensagem(chatId: string, mensagem: string) {
     const texto = mensagem.trim();
     const telefone = this.normalizarTelefone(chatId);
