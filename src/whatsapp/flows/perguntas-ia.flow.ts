@@ -16,54 +16,41 @@ export class PerguntasIaFlow {
     const ctx = this.context.get(chatId);
     if (!ctx?.orcamentoId) throw new Error('Contexto de orçamento não encontrado');
     const payload = ctx.payload ?? {};
-    const historico: string[] = payload.historico ?? [];
+    let historico: string[] = payload.historico ?? [];
     const servicos = payload.servicos ?? [];
-    const servicoAtual = payload.servicoAtual ?? 0;
+    let servicoAtual = payload.servicoAtual ?? 0;
+    let finalizando = payload.finalizando ?? false;
     const servicoContexto = servicos[servicoAtual];
     if (respostaAnterior) {
       historico.push(respostaAnterior);
       await this.orcamentosService.registrarResposta(ctx.orcamentoId, `Pergunta ${historico.length}`, respostaAnterior);
-    }
-    const atingiuLimitePerguntas = historico.length >= 3;
 
-    if (atingiuLimitePerguntas) {
-      const possuiProximoServico = servicoAtual + 1 < servicos.length;
-      if (possuiProximoServico) {
-        const proximoServicoAtual = servicoAtual + 1;
-        const proximoServico = servicos[proximoServicoAtual];
-        const categoriaProximoServico = `Serviço: ${proximoServico.titulo}${
-          proximoServico.descricao ? ` - ${proximoServico.descricao}` : ''
-        }`;
-        const perguntaProximaCategoria = await this.iaService.gerarPerguntaInteligente(
-          categoriaProximoServico,
-          [],
-        );
-        const novoContexto: WhatsappContext = {
-          ...ctx,
-          step: 'perguntas-ia',
-          payload: { ...payload, historico: [], servicos, servicoAtual: proximoServicoAtual },
-        };
-        this.context.set(chatId, novoContexto);
-        return { pergunta: perguntaProximaCategoria, finalizado: false };
+      if (finalizando) {
+        const possuiProximoServico = servicoAtual + 1 < servicos.length;
+        if (possuiProximoServico) {
+          servicoAtual += 1;
+          historico = [];
+          finalizando = false;
+        } else {
+          this.context.set(chatId, {
+            ...ctx,
+            step: 'perguntas-ia',
+            payload: { ...payload, historico, servicos, servicoAtual, finalizando: false },
+          });
+
+          return { finalizado: true };
+        }
       }
-
-      this.context.set(chatId, {
-        ...ctx,
-        step: 'perguntas-ia',
-        payload: { ...payload, historico, servicos, servicoAtual },
-      });
-
-      return { finalizado: true };
     }
 
     const categoriaContexto = servicoContexto
       ? `Serviço: ${servicoContexto.titulo}${servicoContexto.descricao ? ` - ${servicoContexto.descricao}` : ''}`
       : 'Serviço geral solicitado';
-    const pergunta = await this.iaService.gerarPerguntaInteligente(categoriaContexto, historico);
+    const { pergunta, finalizado } = await this.iaService.gerarPerguntaInteligente(categoriaContexto, historico);
     const novoContexto: WhatsappContext = {
       ...ctx,
       step: 'perguntas-ia',
-      payload: { ...payload, historico, servicos, servicoAtual },
+      payload: { ...payload, historico, servicos, servicoAtual, finalizando: finalizado },
     };
     this.context.set(chatId, novoContexto);
     return { pergunta, finalizado: false };

@@ -34,7 +34,10 @@ export class IaService {
     return output.trim();
   }
 
-  async gerarPerguntaInteligente(categoria: string, historico: string[]) {
+  async gerarPerguntaInteligente(
+    categoria: string,
+    historico: string[],
+  ): Promise<{ pergunta: string; finalizado: boolean }> {
     const categoriaDetectada = detectarCategoriaPergunta(categoria);
     const prompt: IaPrompt = {
       system: [perguntasBasePrompt, categoriaDetectada ? categoriaPrompts[categoriaDetectada] : '']
@@ -42,7 +45,17 @@ export class IaService {
         .join('\n\n'),
     };
 
-    return this.perguntar(prompt, [`Categoria: ${categoria}`, ...historico]);
+    const resposta = await this.perguntar(prompt, [`Categoria: ${categoria}`, ...historico]);
+
+    try {
+      const parsed = JSON.parse(resposta) as { pergunta?: string; finalizado?: boolean };
+      if (!parsed.pergunta || typeof parsed.finalizado !== 'boolean') {
+        throw new Error(IA_ERRORS.FORMATO_INVALIDO);
+      }
+      return { pergunta: parsed.pergunta, finalizado: parsed.finalizado };
+    } catch (error) {
+      throw new Error(IA_ERRORS.FORMATO_INVALIDO);
+    }
   }
 
   async separarServicos(descricao: string) {
