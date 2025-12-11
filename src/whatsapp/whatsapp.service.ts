@@ -119,25 +119,54 @@ export class WhatsappService {
 
   private async tratarMenu(chatId: string, opcao: string) {
     const ctx = this.context.get(chatId)!;
-    if (opcao === MENU_OPCOES.CRIAR_ORCAMENTO) {
+    const opcaoNormalizada = this.normalizarOpcaoMenu(opcao);
+
+    if (opcaoNormalizada === MENU_OPCOES.CRIAR_ORCAMENTO) {
       this.context.set(chatId, { ...this.criarContextoBase(ctx), step: 'coleta-descricao' });
       await this.sender.enviarTexto(chatId, 'Descreva o serviço que deseja orçar.');
-    } else if (opcao === MENU_OPCOES.COMPRAR_CREDITOS) {
+    } else if (opcaoNormalizada === MENU_OPCOES.COMPRAR_CREDITOS) {
       const resposta = this.pagamentoFlow.iniciar(chatId, 20);
       await this.sender.enviarTexto(chatId, resposta);
-    } else if (opcao === MENU_OPCOES.MEUS_ORCAMENTOS) {
+    } else if (opcaoNormalizada === MENU_OPCOES.MEUS_ORCAMENTOS) {
       await this.sender.enviarTexto(chatId, 'Em breve listaremos seus orçamentos anteriores.');
-    } else if (opcao === MENU_OPCOES.MEU_PERFIL) {
+    } else if (opcaoNormalizada === MENU_OPCOES.MEU_PERFIL) {
       const perfil = await this.meuPerfilFlow.exibir(chatId);
       await this.sender.enviarTexto(chatId, perfil);
-    } else if (opcao === MENU_OPCOES.ORCAR_MATERIAIS) {
+    } else if (opcaoNormalizada === MENU_OPCOES.ORCAR_MATERIAIS) {
       const materiais = await this.materiaisFlow.gerar(chatId);
       await this.sender.enviarTexto(chatId, materiais);
-    } else if (opcao === MENU_OPCOES.SUPORTE_IA) {
+    } else if (opcaoNormalizada === MENU_OPCOES.SUPORTE_IA) {
       const resposta = await this.suporteIaFlow.responder('Ajuda solicitada');
       await this.sender.enviarTexto(chatId, resposta);
     } else {
       await this.sender.enviarTexto(chatId, 'Opção inválida. Digite menu para ver opções.');
+    }
+  }
+
+  private normalizarOpcaoMenu(opcao: string): string {
+    const texto = opcao.trim();
+
+    switch (texto) {
+      case '1':
+      case MENU_OPCOES.CRIAR_ORCAMENTO:
+        return MENU_OPCOES.CRIAR_ORCAMENTO;
+      case '2':
+      case MENU_OPCOES.COMPRAR_CREDITOS:
+        return MENU_OPCOES.COMPRAR_CREDITOS;
+      case '3':
+      case MENU_OPCOES.MEUS_ORCAMENTOS:
+        return MENU_OPCOES.MEUS_ORCAMENTOS;
+      case '4':
+      case MENU_OPCOES.MEU_PERFIL:
+        return MENU_OPCOES.MEU_PERFIL;
+      case '5':
+      case MENU_OPCOES.ORCAR_MATERIAIS:
+        return MENU_OPCOES.ORCAR_MATERIAIS;
+      case '6':
+      case MENU_OPCOES.SUPORTE_IA:
+        return MENU_OPCOES.SUPORTE_IA;
+      default:
+        return texto;
     }
   }
 

@@ -1,10 +1,10 @@
 export const MENU_OPCOES = {
-  CRIAR_ORCAMENTO: '1',
-  COMPRAR_CREDITOS: '2',
-  MEUS_ORCAMENTOS: '3',
-  MEU_PERFIL: '4',
-  ORCAR_MATERIAIS: '5',
-  SUPORTE_IA: '6',
+  CRIAR_ORCAMENTO: '1️⃣',
+  COMPRAR_CREDITOS: '2️⃣',
+  MEUS_ORCAMENTOS: '3️⃣',
+  MEU_PERFIL: '4️⃣',
+  ORCAR_MATERIAIS: '5️⃣',
+  SUPORTE_IA: '6️⃣',
 };
 
 export const CONTEXT_KEYS = {
