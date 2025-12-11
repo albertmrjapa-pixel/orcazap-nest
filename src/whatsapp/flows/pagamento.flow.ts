@@ -11,6 +11,8 @@ export class PagamentoFlow {
     { valor: 99.9, tokens: 2000, emoji: '4️⃣', numero: '4' },
   ];
 
+  private readonly instrucaoMenu = '\n\nPara voltar ao menu principal a qualquer momento, digite "menu".';
+
   constructor(private readonly pixService: PixService, private readonly context: WhatsappContextStore) {}
 
   async solicitarValorRecarga(chatId: string) {
@@ -19,21 +21,23 @@ export class PagamentoFlow {
 
     this.context.set(chatId, { ...ctx, step: 'pagamento-escolha', payload: {} });
 
-    return `Escolha um valor para recarregar seu saldo:\n${this.gerarMenuRecarga()}\n\n` +
-      'Envie o número ou emoji da opção desejada.';
+    return (
+      `Escolha um valor para recarregar seu saldo:\n${this.gerarMenuRecarga()}\n\n` +
+      `Envie o número ou emoji da opção desejada.${this.instrucaoMenu}`
+    );
   }
 
   async processarEscolha(chatId: string, escolha: string) {
     const opcao = this.normalizarEscolha(escolha);
 
     if (!opcao) {
-      return `Opção inválida. Escolha uma das opções:\n${this.gerarMenuRecarga()}`;
+      return `Opção inválida. Escolha uma das opções:\n${this.gerarMenuRecarga()}${this.instrucaoMenu}`;
     }
 
     const mensagemPix = await this.iniciar(chatId, opcao.valor);
     const valorFormatado = opcao.valor.toFixed(2).replace('.', ',');
 
-    return `Você escolheu ${opcao.emoji} R$ ${valorFormatado} (${opcao.tokens} tokens). ${mensagemPix}`;
+    return `Você escolheu ${opcao.emoji} R$ ${valorFormatado} (${opcao.tokens} tokens). ${mensagemPix}${this.instrucaoMenu}`;
   }
 
   async iniciar(chatId: string, valor: number) {
@@ -42,7 +46,7 @@ export class PagamentoFlow {
 
     const cobranca = await this.pixService.gerarCobranca(valor, ctx.profissionalId);
     this.context.set(chatId, { ...ctx, step: 'pagamento', payload: { cobranca } });
-    return `Use o PIX copia-e-cola para pagar: ${cobranca.copiaCola}`;
+    return `Use o PIX copia-e-cola para pagar: ${cobranca.copiaCola}${this.instrucaoMenu}`;
   }
 
   async iniciarRecargaPadrao(chatId: string) {

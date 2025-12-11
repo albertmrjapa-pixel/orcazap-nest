@@ -21,6 +21,7 @@ import { WhatsappContext } from './types/whatsapp-context.type';
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
+  private readonly instrucaoCancelar = '\n\nPara cancelar e voltar ao menu principal a qualquer momento, digite "cancelar" ou "menu".';
 
   constructor(
     private readonly sender: WhatsappSender,
@@ -49,6 +50,7 @@ export class WhatsappService {
     const texto = mensagem.trim();
     const telefone = this.normalizarTelefone(chatId);
     let ctx = this.context.get(chatId);
+    const textoNormalizado = texto.toLowerCase();
 
     if (!ctx) {
       const profissionalExistente = await this.profissionalService.obterPorTelefone(telefone);
@@ -73,9 +75,15 @@ export class WhatsappService {
       return;
     }
 
-    if (texto.toLowerCase() === 'menu') {
+    if (textoNormalizado === 'cancelar' || textoNormalizado === 'sair') {
       this.context.set(chatId, this.criarContextoBase(ctx));
-      await this.sender.enviarTexto(chatId, gerarMenuPrincipal());
+      await this.sender.enviarTexto(chatId, `Fluxo cancelado. Voltamos ao menu principal.\n${gerarMenuPrincipal()}`);
+      return;
+    }
+
+    if (textoNormalizado === 'menu') {
+      this.context.set(chatId, this.criarContextoBase(ctx));
+      await this.sender.enviarTexto(chatId, `Voltamos ao menu principal.\n${gerarMenuPrincipal()}`);
       return;
     }
 
@@ -135,7 +143,10 @@ export class WhatsappService {
       if (!possuiSaldo) return;
 
       this.context.set(chatId, { ...this.criarContextoBase(ctx), step: 'coleta-descricao' });
-      await this.sender.enviarTexto(chatId, 'Descreva o serviço que deseja orçar.');
+      await this.sender.enviarTexto(
+        chatId,
+        `Descreva o serviço que deseja orçar.${this.instrucaoCancelar}`,
+      );
     } else if (opcaoNormalizada === MENU_OPCOES.COMPRAR_CREDITOS) {
       const resposta = await this.pagamentoFlow.solicitarValorRecarga(chatId);
       await this.sender.enviarTexto(chatId, resposta);
@@ -219,12 +230,12 @@ export class WhatsappService {
     if (resultado.finalizado) {
       this.context.set(chatId, { ...ctx, step: 'perguntas-fixas', payload: { fixaIndex: 0 } });
       const primeira = this.perguntasFixasFlow.proximaPergunta(0);
-      await this.sender.enviarTexto(chatId, `Perguntas finais: ${primeira}`);
+      await this.sender.enviarTexto(chatId, `Perguntas finais: ${primeira}${this.instrucaoCancelar}`);
       return;
     }
 
     if (resultado.pergunta) {
-      await this.sender.enviarTexto(chatId, resultado.pergunta);
+      await this.sender.enviarTexto(chatId, `${resultado.pergunta}${this.instrucaoCancelar}`);
     }
   }
 
@@ -234,7 +245,7 @@ export class WhatsappService {
     const proxima = await this.perguntasFixasFlow.registrarResposta(chatId, resposta, index);
     if (proxima) {
       this.context.set(chatId, { ...ctx, payload: { fixaIndex: index + 1 }, step: 'perguntas-fixas' });
-      await this.sender.enviarTexto(chatId, proxima);
+      await this.sender.enviarTexto(chatId, `${proxima}${this.instrucaoCancelar}`);
     } else {
       await this.iniciarDefinicaoPrecos(chatId);
     }
@@ -282,7 +293,7 @@ export class WhatsappService {
 
     await this.sender.enviarTexto(
       chatId,
-      `Qual o valor para "${servico.titulo}" (quantidade ${servico.quantidade})? Responda somente com o número em reais.`,
+      `Qual o valor para "${servico.titulo}" (quantidade ${servico.quantidade})? Responda somente com o número em reais.${this.instrucaoCancelar}`,
     );
   }
 
@@ -324,7 +335,7 @@ export class WhatsappService {
 
     await this.sender.enviarTexto(
       chatId,
-      `Anotei. Qual o valor para "${proximoServico.titulo}" (quantidade ${proximoServico.quantidade})?`,
+      `Anotei. Qual o valor para "${proximoServico.titulo}" (quantidade ${proximoServico.quantidade})?${this.instrucaoCancelar}`,
     );
   }
 
@@ -390,7 +401,7 @@ export class WhatsappService {
 
     await this.sender.enviarTexto(
       chatId,
-      `Qual o novo valor para "${servico.titulo}" (quantidade ${servico.quantidade})? Responda apenas com o número em reais.`,
+      `Qual o novo valor para "${servico.titulo}" (quantidade ${servico.quantidade})? Responda apenas com o número em reais.${this.instrucaoCancelar}`,
     );
   }
 
