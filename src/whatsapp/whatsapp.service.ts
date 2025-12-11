@@ -99,6 +99,12 @@ export class WhatsappService {
       case 'confirmacao':
         await this.tratarConfirmacao(chatId, texto);
         break;
+      case 'confirmacao-alterar-servico':
+        await this.tratarConfirmacaoSelecaoServico(chatId, texto);
+        break;
+      case 'confirmacao-alterar-valor':
+        await this.tratarConfirmacaoValor(chatId, texto);
+        break;
       case 'pagamento':
         await this.sender.enviarTexto(chatId, 'Aguardando confirmação do PIX.');
         break;
@@ -259,9 +265,9 @@ export class WhatsappService {
   }
 
   private async tratarConfirmacao(chatId: string, texto: string) {
-    const comando = texto.trim();
+    const comando = texto.trim().toLowerCase();
 
-    if (comando.toLowerCase() === 'confirmar') {
+    if (comando === '2' || comando === 'confirmar') {
       const resultado = await this.confirmacaoFlow.confirmar(chatId);
       await this.sender.enviarTexto(chatId, resultado.mensagem);
 
@@ -282,24 +288,72 @@ export class WhatsappService {
       return;
     }
 
-    const alterarMatch = comando.match(/alterar\s+(\d+)\s+([\d,.]+)/i);
-    if (alterarMatch) {
-      const indice = parseInt(alterarMatch[1], 10);
-      const valor = parseFloat(alterarMatch[2].replace(/\./g, '').replace(',', '.'));
-      if (isNaN(valor) || valor <= 0) {
-        await this.sender.enviarTexto(chatId, 'Informe um valor válido maior que zero.');
-        return;
-      }
-
-      const mensagem = await this.confirmacaoFlow.alterarValor(chatId, indice, valor);
-      await this.sender.enviarTexto(chatId, mensagem);
-      const resumo = await this.confirmacaoFlow.solicitarConfirmacao(chatId);
-      await this.sender.enviarTexto(chatId, resumo);
+    if (comando === '1' || comando.startsWith('alterar')) {
+      const ctx = this.context.get(chatId)!;
+      this.context.set(chatId, { ...ctx, step: 'confirmacao-alterar-servico', payload: {} });
+      await this.sender.enviarTexto(
+        chatId,
+        'Qual número do serviço deseja alterar? Envie apenas o número correspondente na lista.',
+      );
       return;
     }
 
     const resumo = await this.confirmacaoFlow.solicitarConfirmacao(chatId);
     await this.sender.enviarTexto(chatId, `Não entendi. ${resumo}`);
+  }
+
+  private async tratarConfirmacaoSelecaoServico(chatId: string, texto: string) {
+    const ctx = this.context.get(chatId)!;
+    const indice = parseInt(texto.trim(), 10) - 1;
+
+    if (Number.isNaN(indice)) {
+      await this.sender.enviarTexto(chatId, 'Envie apenas o número do serviço que deseja alterar.');
+      return;
+    }
+
+    const servicos = await this.orcamentosService.listarServicos(ctx.orcamentoId!);
+    if (indice < 0 || indice >= servicos.length) {
+      await this.sender.enviarTexto(chatId, 'Número inválido. Use o número exibido na lista de serviços.');
+      return;
+    }
+
+    const servico = servicos[indice];
+    this.context.set(chatId, {
+      ...ctx,
+      step: 'confirmacao-alterar-valor',
+      payload: { ...ctx.payload, servicoIndex: indice },
+    });
+
+    await this.sender.enviarTexto(
+      chatId,
+      `Qual o novo valor para "${servico.titulo}" (quantidade ${servico.quantidade})? Responda apenas com o número em reais.`,
+    );
+  }
+
+  private async tratarConfirmacaoValor(chatId: string, texto: string) {
+    const ctx = this.context.get(chatId)!;
+    const indice = ctx.payload?.servicoIndex;
+
+    if (typeof indice !== 'number') {
+      this.context.set(chatId, { ...ctx, step: 'confirmacao' });
+      await this.sender.enviarTexto(chatId, 'Não consegui identificar o serviço. Vamos revisar o resumo.');
+      const resumo = await this.confirmacaoFlow.solicitarConfirmacao(chatId);
+      await this.sender.enviarTexto(chatId, resumo);
+      return;
+    }
+
+    const valor = parseFloat(texto.replace(/\./g, '').replace(',', '.'));
+    if (isNaN(valor) || valor <= 0) {
+      await this.sender.enviarTexto(chatId, 'Informe um valor numérico maior que zero.');
+      return;
+    }
+
+    const mensagem = await this.confirmacaoFlow.alterarValor(chatId, indice + 1, valor);
+    await this.sender.enviarTexto(chatId, mensagem);
+
+    this.context.set(chatId, { ...ctx, step: 'confirmacao', payload: {} });
+    const resumo = await this.confirmacaoFlow.solicitarConfirmacao(chatId);
+    await this.sender.enviarTexto(chatId, resumo);
   }
 
   async aplicarAjuste(chatId: string, fator: number) {

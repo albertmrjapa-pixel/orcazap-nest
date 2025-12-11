@@ -41,36 +41,20 @@ export class ConfirmacaoFlow {
     const total = CalculadoraOrcamento.calcularTotal(servicos);
     const lista = this.formatarServicos(servicos);
     const possuiValorZerado = servicos.some((s) => (s.preco ?? 0) <= 0);
-    const orcamento = await this.orcamentosService.obterDadosBasicos(orcamentoId);
-
-    const clienteNome = orcamento?.clienteNome || 'Não informado';
-    const totalFormatado = total.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
 
     this.context.set(chatId, { ...this.context.get(chatId)!, step: 'confirmacao' });
 
     const instrucoes =
-      'Digite CONFIRMAR para gerar o orçamento ou ALTERAR <número do serviço> <novo valor> para ajustar preços.';
+      'Escolha uma opção:\n1 - Alterar valores\n2 - Confirmar orçamento\nDigite apenas o número da opção. Se escolher alterar, enviaremos o passo a passo para definir o novo valor.';
     const alertaTotal =
       total <= 0 || possuiValorZerado
         ? '\n⚠️ Há serviços sem valor definido. Atualize-os antes de confirmar.'
         : '';
 
-    const respostasProfissional = (orcamento?.respostas ?? [])
-      .map((r) => `- ${r.pergunta}: ${r.resposta}`)
-      .join('\n');
-    const respostasFixas = (orcamento?.respostasFixas ?? [])
-      .map((r) => `- ${r.campo}: ${r.resposta}`)
-      .join('\n');
-
-    const resumoInterno = `\n\nResumo interno para o profissional:\n- Cliente final: ${clienteNome}\n- Total geral: ${totalFormatado}\n- Itens listados acima com valores calculados.\n- Informações fornecidas:\n${respostasProfissional || '- (sem respostas registradas)'}\n- Respostas fixas:\n${respostasFixas || '- (sem respostas fixas ainda)'}\nAviso: Revise os valores antes de gerar o PDF final.`;
-
     return `Revise os valores dos serviços:\n${lista}\n\nTotal: ${total.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    })}${alertaTotal}${resumoInterno}\n${instrucoes}`;
+    })}${alertaTotal}\n${instrucoes}`;
   }
 
   async alterarValor(chatId: string, indice: number, novoValor: number) {
