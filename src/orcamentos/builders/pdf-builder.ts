@@ -1,4 +1,11 @@
-import { Orcamento, RespostasFixas, ServicoOrcamento, MaterialEstimado, Profissional } from '@prisma/client';
+import {
+  Orcamento,
+  RespostasFixas,
+  ServicoOrcamento,
+  MaterialEstimado,
+  Profissional,
+  PerguntaRespondida,
+} from '@prisma/client';
 import { CalculadoraOrcamento } from '../utils/calculadora-orcamento';
 import { formatarPreco } from '../../whatsapp/utils/formatters';
 
@@ -7,6 +14,7 @@ type OrcamentoCompleto = Orcamento & {
   respostasFixas: RespostasFixas[];
   materiais: MaterialEstimado[];
   profissional: Profissional;
+  respostas: PerguntaRespondida[];
 };
 
 export class PdfBuilder {
@@ -26,6 +34,10 @@ export class PdfBuilder {
 
     const respostasHtml = orcamento.respostasFixas
       .map((r) => `<li><strong>${r.campo}:</strong> ${r.resposta}</li>`)
+      .join('');
+
+    const respostasProfissionalHtml = orcamento.respostas
+      .map((r) => `<li><strong>${r.pergunta}:</strong> ${r.resposta}</li>`)
       .join('');
 
     const materiaisHtml = orcamento.materiais
@@ -62,6 +74,8 @@ export class PdfBuilder {
             <tbody>${servicosHtml}</tbody>
           </table>
           <p class="total">Total: ${formatarPreco(total)}</p>
+          <h2>Informações fornecidas pelo profissional</h2>
+          <ul>${respostasProfissionalHtml}</ul>
           <h2>Respostas fixas</h2>
           <ul>${respostasHtml}</ul>
           <h2>Materiais sugeridos (oculto ao cliente)</h2>

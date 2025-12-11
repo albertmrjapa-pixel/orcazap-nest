@@ -35,7 +35,7 @@ export class OrcamentosService {
   async obterDadosBasicos(orcamentoId: string) {
     return this.prisma.orcamento.findUnique({
       where: { id: orcamentoId },
-      include: { respostasFixas: true },
+      include: { respostasFixas: true, respostas: true },
     });
   }
 
@@ -82,25 +82,62 @@ export class OrcamentosService {
       quantidade: servico.quantidade ?? 1,
     }));
 
-    const sugestoes = await this.iaService.precificarPorRegiao(regiaoCliente, itens);
+    const contextoIa = await this.montarContextoIa(orcamentoId);
+    const sugestoes = await this.iaService.precificarPorRegiao(regiaoCliente, itens, contextoIa);
 
-    const atualizados = servicos.map((servico, index) => {
-      const iaItem = sugestoes[index];
-      if (!iaItem) return servico;
+    const sugestaoMap = new Map<string, (typeof sugestoes)[number]>(
+      sugestoes.map((s) => [s.titulo.toLowerCase(), s]),
+    );
 
-      const precoSugerido = iaItem.precoSugerido ?? iaItem.precoMinimo ?? iaItem.precoMaximo;
+    const atualizados = servicos
+      .map((servico, index) => {
+        const iaItem = sugestaoMap.get(servico.titulo.toLowerCase()) ?? sugestoes[index];
+        if (!iaItem) return servico;
 
-      return {
-        ...servico,
-        titulo: servico.titulo,
-        preco: precoSugerido ?? servico.preco,
-        descricao: iaItem.descricao ?? servico.descricao,
-        quantidade: servico.quantidade,
-      };
-    });
+        if (iaItem.incluir === false) return null;
+
+        const precoSugerido = iaItem.precoSugerido ?? iaItem.precoMinimo ?? iaItem.precoMaximo;
+        const quantidadeAjustada = iaItem.quantidade ?? servico.quantidade ?? 1;
+
+        return {
+          ...servico,
+          titulo: servico.titulo,
+          preco: precoSugerido ?? servico.preco,
+          descricao: iaItem.descricao ?? servico.descricao,
+          quantidade: quantidadeAjustada,
+        };
+      })
+      .filter((servico): servico is typeof servicos[number] => Boolean(servico));
 
     await this.registrarServicos(orcamentoId, atualizados);
     return this.listarServicos(orcamentoId);
+  }
+
+  private async montarContextoIa(orcamentoId: string) {
+    const orcamento = await this.prisma.orcamento.findUnique({
+      where: { id: orcamentoId },
+      include: { respostas: true, respostasFixas: true, servicos: true },
+    });
+
+    if (!orcamento) return [];
+
+    const respostasContexto = orcamento.respostas
+      .map((r) => `Pergunta: ${r.pergunta} | Resposta: ${r.resposta}`)
+      .join(' || ');
+    const respostasFixasContexto = orcamento.respostasFixas
+      .map((r) => `${r.campo}: ${r.resposta}`)
+      .join(' | ');
+    const servicosContexto = orcamento.servicos
+      .map(
+        (s) => `${s.titulo}${s.descricao ? ` - ${s.descricao}` : ''} (quantidade: ${s.quantidade}, preco: ${s.preco})`,
+      )
+      .join(' | ');
+
+    return [
+      servicosContexto ? `Serviços atuais: ${servicosContexto}` : '',
+      respostasContexto ? `Respostas do profissional: ${respostasContexto}` : '',
+      respostasFixasContexto ? `Respostas fixas: ${respostasFixasContexto}` : '',
+    ].filter(Boolean);
   }
 
   async estimarMateriais(orcamentoId: string) {
@@ -116,7 +153,7 @@ export class OrcamentosService {
   async gerarResumoIa(orcamentoId: string) {
     const orcamento = await this.prisma.orcamento.findUnique({
       where: { id: orcamentoId },
-      include: { servicos: true, respostasFixas: true, profissional: true },
+      include: { servicos: true, respostasFixas: true, respostas: true, profissional: true },
     });
     const texto = await this.iaService.resumirOrcamento(orcamento!);
     return texto;
@@ -125,7 +162,7 @@ export class OrcamentosService {
   async gerarPdf(orcamentoId: string) {
     const orcamento = await this.prisma.orcamento.findUnique({
       where: { id: orcamentoId },
-      include: { servicos: true, respostasFixas: true, profissional: true, materiais: true },
+      include: { servicos: true, respostasFixas: true, respostas: true, profissional: true, materiais: true },
     });
     const resumo = await this.gerarResumoIa(orcamentoId);
     const html = PdfBuilder.montarHtml(orcamento!, resumo);
