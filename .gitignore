@@ -4,3 +4,5 @@
 /prisma/dev.db
 .prisma
 .DS_Store
+/.wwebjs_auth
+/storage/whatsapp-auth
