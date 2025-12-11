@@ -20,6 +20,7 @@ model Profissional {
   orcamentos   Orcamento[]
   conversas    LogConversa[]
   treinamentos TreinamentoIaCategoria[]
+  pagamentos   Pagamento[]
 }
 
 model Categoria {
@@ -118,4 +119,17 @@ model TreinamentoIaCategoria {
 
   categoria   Categoria    @relation(fields: [categoriaId], references: [id])
   profissional Profissional? @relation(fields: [profissionalId], references: [id])
+}
+
+model Pagamento {
+  id             String      @id @default(uuid())
+  txid           String      @unique
+  profissionalId String
+  valor          Float
+  copiaCola      String
+  status         String
+  pagoEm         DateTime?
+  criadoEm       DateTime    @default(now())
+
+  profissional Profissional @relation(fields: [profissionalId], references: [id])
 }
