@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { WhatsappService } from './whatsapp.service';
 import { WhatsappGateway } from './whatsapp.gateway';
 import { WhatsappClient } from './core/whatsapp.client';
@@ -21,7 +21,7 @@ import { PixModule } from '../pix/pix.module';
 import { ProfissionalModule } from '../profissional/profissional.module';
 
 @Module({
-  imports: [OrcamentosModule, IaModule, PixModule, ProfissionalModule],
+  imports: [OrcamentosModule, IaModule, forwardRef(() => PixModule), ProfissionalModule],
   providers: [
     WhatsappService,
     WhatsappGateway,
