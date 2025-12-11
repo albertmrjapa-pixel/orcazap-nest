@@ -31,4 +31,13 @@ export class ProfissionalService {
   async obterPorTelefone(telefone: string) {
     return this.prisma.profissional.findFirst({ where: { telefone } });
   }
+
+  async debitarSaldo(profissionalId: string, valor: number) {
+    if (valor <= 0) return;
+
+    return this.prisma.profissional.update({
+      where: { id: profissionalId },
+      data: { saldo: { decrement: valor } },
+    });
+  }
 }
