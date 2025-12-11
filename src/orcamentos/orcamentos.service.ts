@@ -81,9 +81,12 @@ export class OrcamentosService {
       const iaItem = sugestoes[index];
       if (!iaItem) return servico;
 
+      const precoSugerido = iaItem.precoSugerido ?? iaItem.precoMinimo ?? iaItem.precoMaximo;
+
       return {
         ...servico,
-        preco: iaItem.precoSugerido ?? servico.preco,
+        titulo: iaItem.titulo?.trim() || servico.titulo,
+        preco: precoSugerido ?? servico.preco,
         descricao: iaItem.descricao ?? servico.descricao,
         quantidade: iaItem.quantidade ?? servico.quantidade,
       };
