@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { perguntasBasePrompt } from './prompts/perguntas-inteligentes/base.prompt';
-import { categoriaPrompts, detectarCategoriaPergunta } from './prompts/perguntas-inteligentes/categorias';
 import { precificacaoPorRegiaoPrompt } from './prompts/precificacao-por-regiao.prompt';
 import { IaItemPrecificado } from './types/ia-precificacao.type';
 import { IA_ERRORS } from './types/ia-errors';
@@ -35,17 +34,20 @@ export class IaService {
   }
 
   async gerarPerguntaInteligente(
-    categoria: string,
+    descricaoServico: string,
     historico: string[],
   ): Promise<{ pergunta: string; finalizado: boolean }> {
-    const categoriaDetectada = detectarCategoriaPergunta(categoria);
     const prompt: IaPrompt = {
-      system: [perguntasBasePrompt, categoriaDetectada ? categoriaPrompts[categoriaDetectada] : '']
-        .filter(Boolean)
-        .join('\n\n'),
+      system: perguntasBasePrompt,
     };
 
-    const resposta = await this.perguntar(prompt, [`Categoria: ${categoria}`, ...historico]);
+    const contexto = [
+      `Descrição inicial ou resumida do serviço: ${descricaoServico}`,
+      'Histórico de perguntas e respostas (use para não repetir informações):',
+      ...historico,
+    ];
+
+    const resposta = await this.perguntar(prompt, contexto);
 
     try {
       const parsed = this.parsePerguntaJson(resposta);

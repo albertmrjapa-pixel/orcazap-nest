@@ -48,10 +48,10 @@ export class PerguntasIaFlow {
       }
     }
 
-    const categoriaContexto = servicoContexto
+    const descricaoContexto = servicoContexto
       ? `Serviço: ${servicoContexto.titulo}${servicoContexto.descricao ? ` - ${servicoContexto.descricao}` : ''}`
       : 'Serviço geral solicitado';
-    const { pergunta, finalizado } = await this.iaService.gerarPerguntaInteligente(categoriaContexto, historico);
+    const { pergunta, finalizado } = await this.iaService.gerarPerguntaInteligente(descricaoContexto, historico);
     const novoContexto: WhatsappContext = {
       ...ctx,
       step: 'perguntas-ia',
@@ -60,5 +60,4 @@ export class PerguntasIaFlow {
     this.context.set(chatId, novoContexto);
     return { pergunta, finalizado: false };
   }
-
 }
