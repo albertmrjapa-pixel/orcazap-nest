@@ -36,6 +36,7 @@ export class IaService {
   async gerarPerguntaInteligente(
     descricaoServico: string,
     historico: string[],
+    localizacao?: { cidadeEstado?: string; bairro?: string },
   ): Promise<{ pergunta: string; finalizado: boolean }> {
     const prompt: IaPrompt = {
       system: perguntasBasePrompt,
@@ -43,9 +44,14 @@ export class IaService {
 
     const contexto = [
       `Descrição inicial ou resumida do serviço: ${descricaoServico}`,
+      localizacao
+        ? `Localização compartilhada (aplicar a todos os serviços): cidade/estado = ${
+            localizacao.cidadeEstado ?? 'não informado'
+          }; bairro = ${localizacao.bairro ?? 'não informado'}.`
+        : '',
       'Histórico de perguntas e respostas (use para não repetir informações):',
       ...historico,
-    ];
+    ].filter(Boolean);
 
     const resposta = await this.perguntar(prompt, contexto);
 

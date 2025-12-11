@@ -21,7 +21,7 @@ export class ColetaFlow {
       profissionalId,
       orcamentoId: orcamento.id,
       step: 'perguntas-ia',
-      payload: { historico: [], servicos, servicoAtual: 0 },
+      payload: { historico: [], historicoGlobal: [], localizacao: {}, servicos, servicoAtual: 0 },
     };
     this.context.set(chatId, ctx);
     return {
